@@ -1,15 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fomation_tc/Taskes/DadaHelper.dart';
-import 'package:fomation_tc/Taskes/loginPageContract.dart';
-import 'package:fomation_tc/model/User.dart';
+ import 'package:firebase_auth/firebase_auth.dart';
 
 class SignupPage extends StatefulWidget {
   @override
   _SignupPageState createState() => _SignupPageState();
 }
 
-class _SignupPageState extends State<SignupPage> implements LoginPageContract{
+class _SignupPageState extends State<SignupPage> {
   final GlobalKey<FormState> _formKey = new GlobalKey<FormState>();
   bool isSelected = false;
   final scaffoldKey = new GlobalKey<ScaffoldState>();
@@ -21,30 +20,14 @@ class _SignupPageState extends State<SignupPage> implements LoginPageContract{
   TextEditingController address =new TextEditingController();
 
 
-  bool _isLoading = false;
-  LoginPagePresent _present;
-  @override
+   @override
   void initState() {
     SystemChrome.setEnabledSystemUIOverlays([]);
     super.initState();
   }
 
-  _SignupPageState(){
-    _present = new LoginPagePresent(this);
-  }
 
 
-  void _submit(String string_name , String string_password,String email){
-    final form = _formKey.currentState;
-    if(form.validate()){
-      setState(() {
-        _isLoading = true;
-        form.save();
-        _present.doSignUp(string_name, string_password,email);
-
-      });
-    }
-  }
   void _showSnackBar(String text) {
     scaffoldKey.currentState.showSnackBar(new SnackBar(
       content: new Text(text),
@@ -244,8 +227,8 @@ class _SignupPageState extends State<SignupPage> implements LoginPageContract{
                               String name_text = firstName.text + " " +
                                   LastName.text;
                               String pass_text = password.text;
-                              _submit(name_text, pass_text, userEmail);
-                              Navigator.pushNamed(context, '/');
+                              _validateLoginInput();
+
                              }else{
                               _showSnackBar("Inavilad Email");
                             }
@@ -302,27 +285,9 @@ class _SignupPageState extends State<SignupPage> implements LoginPageContract{
     );
   }
 
-  @override
-  void onLoginError(String error) {
-    // TODO: implement onLoginError
-    _showSnackBar(error);
-    setState(() {
-      _isLoading = false;
 
-    });
-  }
 
-  @override
-  void onLoginSuccess(User user) async{
-    // TODO: implement onLoginSuccess
-    _showSnackBar(user.username + "login");
-    setState(() {
-      _isLoading = false;
 
-    });
-    DatabaseHelper db = new DatabaseHelper();
-    await db.saveUser(user);
-  }
   bool validateEmail(String value) {
     Pattern pattern =
         r'^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$';
@@ -330,5 +295,63 @@ class _SignupPageState extends State<SignupPage> implements LoginPageContract{
     return (!regex.hasMatch(value)) ? false : true;
   }
 
-}
+  void    _validateLoginInput() async{
+    final FormState form = _formKey.currentState;
+    if(_formKey.currentState.validate()){
+      form.save();
+      try{
+        FirebaseUser user=   (await FirebaseAuth.instance.createUserWithEmailAndPassword(email: email.text, password: password.text)).user;
+        UserUpdateInfo userUpdateInfo = new UserUpdateInfo();
+        String name = firstName.text + " " + LastName.text;
+        userUpdateInfo.displayName =name;
+        user.updateProfile(userUpdateInfo).then((value){
+          Navigator.of(context).pushReplacementNamed('/');
+          Firestore.instance.collection('users').document().setData(
+              {'email': email.text, 'displayName': name}).then((onValue) {
+          });
+        });
+      }catch(error){
+        switch (error.code) {
+          case "ERROR_EMAIL_ALREADY_IN_USE":
+            {
+
+              showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      content: Container(
+                        child: Text("error "),
+                      ),
+                    );
+                  });
+            }
+            break;
+          case "ERROR_WEAK_PASSWORD":
+            {
+
+              showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      content: Container(
+                        child: Text("error"),
+                      ),
+                    );
+                  });
+            }
+            break;
+          default:
+            {
+
+            }
+        }
+      }
+      }
+
+
+    }
+
+
+  }
+
 

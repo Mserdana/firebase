@@ -213,15 +213,8 @@ class newProductState extends State<newProduct>{
 
 
   Future<int> _saveProdcut(String Productname  , String Productdesc , String Productimagsrc, Productcategory , String Pprice )async{
-    Product product = new Product();
-    product.ProductName =Productname ;
-    product.ProductDesc =Productdesc;
-    product.ProductImagsrc =Productimagsrc;
-    product.ProductCategory = Productcategory;
-    product.ProductPrice = Pprice;
-    DataHelperProdut helperProdut =  DataHelperProdut();
-    int id = await helperProdut.SaveProduct(product);
-    return id;
+
+
 
   }
 }
